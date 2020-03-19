@@ -1,6 +1,4 @@
 name: "Commuting Patterns in Maryland"
 navbar:
   title: "Analysis"
-output:
-  html_document:
- theme: Jekylltheme: jekyll-theme-cayman
+theme: Jekylltheme: jekyll-theme-cayman
