@@ -1,0 +1,134 @@
+---
+  title: "Examining the Commuting Patterns in the Maryland portion of the Washington, D.C. Metro Area"
+author: "Liam Abbate"
+date: "3/19/2020"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'Z:/ENVS_117/final_project')
+#set-up
+library(tidyverse)
+library(sf)
+library(readxl)
+library(tidycensus)
+library(tmap)
+library(leaflet)
+library(stats)
+library(geosphere)
+library(raster)
+library(sp)
+```
+
+
+##	Background: Transportation in the United States
+
+How do you get around every day? It’s important because you likely need a way to get to work (only 1.7% of Americans walk to work), go grocery shopping, see friends and family, and whatever else you do in your life. If you’re like most Americans, you probably drive most places. While on average, Americans pay [13% of their household income on transportation costs, the 20% of people earning the lowest amount money pay 29% *of their income*](https://www.itdp.org/2019/05/23/high-cost-transportation-united-states/) on transportation costs.
+
+I would like to influence policy makers but also voters. As long as both voters and stakeholders [view public transportation in the United States as welfare, rather than as a public good,](https://www.vox.com/2015/8/10/9118199/public-transportation-subway-buses) the quality and availability of public transportation will remain poor.
+
+```{r eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+load("walking.RData")
+mytheme <- theme(panel.grid.major = element_line(colour="gray25", size = (0.7)),
+                 panel.grid.minor = element_line(size = (0.2), colour="gray65"))
+chart_sums <- ggplot(sum_data, aes(cols2, total_percs)) +
+  geom_bar(stat = "identity", fill="#DA901E") +
+  xlab("Types of Transit") + ylab("% of Commuters Nationally")
+chart_sums + mytheme
+```
+
+This is an important topic because transportation comprises a large section of carbon emissions and other air pollution in this country. Electric cars represent a solution to many of the environmental consequences of conventional gas-powered cars, yet electric cars have their own limitations (e.g. limited viability for long-distance trips). For this reason, I view electrified public transit as the ideal future of transportation in the United States.
+Additionally, many Americans have long, stressful commutes. I think that traffic is a problem which single-occupancy-vehicles (SOVs) contribute to disproportionately. Currently, 85% of workers drive to work - this figure does include carpools. It is a more efficient allocation of fuel and of space to implement public transportation. Additionally, parking lots take up large portions of space in many American communities. Widespread public transportation could reduce the need for large parking lots, particularly if stations/stops can be spaced within walking distance of housing in high-density population areas.
+
+
+```{r eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+load("means-graph.RData")
+chart_means <- ggplot(means_data, aes(cols, means)) +
+  geom_bar(stat = "identity", fill="#5499C7") +
+  xlab("Types of Transit") +
+  ylab("Mean commute length (min)")
+#  scale_fill_manual(#5499C7)
+chart_means
+```
+
+Currently, much public funds are directed at roads (yet they are still in disrepair?). There is also a sizable quantity of funding being directed at buses, light rail, and other public transportation systems; yet, these systems are lacking in frequency and distribution. Politicians have incentives to [build “something new”. Repairing or upgrading an existing network of transportation does not provide public officials with the same media attention](http://theconversation.com/why-is-the-u-s-unwilling-to-pay-for-good-public-transportation-56788) that a ribbon-cutting ceremony does.
+
+
+##Comparisons within and outside of the U.S.
+
+Additionally, nearly every single developed country has a developed, accessible, and usable transit network. This is true of Europe, [but also Canada, another country that has infrastructure and cities](https://www.vox.com/2015/8/10/9118199/public-transportation-subway-buses) built in the last century to century and a half. I found this striking about Ireland, France, and Germany. In Europe, the EU aims to improve “a polycentric and more balanced system” with connections between short-distance and long distance trains and other forms of transportation (Knapp et al. 3)
+
+However, the transit network in the United States has not always been so sparse and inadequate. In the early twentieth century, before the dominance of automobiles, [public transit in the U.S. thrived](https://www.citylab.com/transportation/2018/08/how-america-killed-transit/568825/). As cars became the main competition with trains and buses, these other services cut frequency to cut costs, but in doing so only discouraged ridership. Decreased ridership led to further cutting costs, and the cycle continued. Furthermore, as the suburbanization of America continued, many people moved to areas served by free ways but not by public transit. The result has been the massive decline of both trains [and buses](https://www.nytimes.com/interactive/2020/03/13/upshot/mystery-of-missing-bus-riders.html?action=click&module=moreIn&pgtype=Article&region=Footer&action=click&module=MoreInSection&pgtype=Article&region=Footer&contentCollection=The%20Upshot).
+
+One study has examined how the [fare system for BART disproportionately burdens low-income residents](https://sf.curbed.com/2019/1/9/18118201/bart-pay-by-distance-transit-bay-area-transportation). This is because gentrification has led to the displacement of low-income populations into outlying areas, further from San Francisco and Oakland. Additionally, several studies show the effects of how public transportation is structured in New York City. New York City has a uniquely high proportion (among cities in the United States) of commuters who walk or bike. The city also has a large proportion of households who do not own a car. Yet, many low-income neighborhoods are served only by infrequent bus routes, rather than the well-known New York subway. However, [the subway has many of its own issues](https://www.popsci.com/nyc-subway-problems-and-solutions/): especially pervasive delays.
+
+
+Detailed Analysis of the D.C. suburbs in Maryland
+
+In this analysis, I explore the commuting patterns of a portion of the Washington, D.C. area, particularly how access to public transportation relates or correlates to other factors in Calvert, Charles, Frederick, Montgomery, and Prince George's counties, Maryland. I examine the relationship among commute times, public transportation access, and the traffic frequency of high-traffic roads. Of the 23 employment centers in Maryland (containing 40% of employment in the state) identified by Knaap et al., eight lie in the 5 counties I examine. Overall, as of 2015 nearly 35% of jobs in Maryland lie in the state’s DC suburbs.
+
+The eight employment areas which lie in the area of focus exhibit vast disparity: Silver Spring and Bethesda (two inner-suburbs of D.C. in Montgomery which comprise two of the four densest of the 23 employment centers) have nearly 16% of their trips made with transit, while Frederick, Frederick County has less than 2% of its trips made using transit.
+INSERT map from page 16 Knaap et al.
+
+###Public Policy Transportation Options in Maryland
+
+```{r, echo=FALSE, warning = FALSE, message = FALSE}
+load("traffic_pts.RData")
+fewTrafPts <- fewTrafPts %>%
+  dplyr::rename("Annual_Average_Weekday_Traffic_2016" = "AAWDT_2016")
+tmap_mode("view") #FOR viewing!!!
+DT16map_pts <- tm_basemap(leaflet::providers$CartoDB.Positron, group = "CartoDB.Positron") +
+  tm_shape(fewTrafPts) +
+  tm_dots(size = 0.2, col = "Annual_Average_Weekday_Traffic_2016", style = "quantile", palette = "Purples")
+DT16map_pts
+```
+
+Transit-Oriented Developments (TODs) in the Baltimore and Washington, D.C. areas are thought to increase “nonauto mode share” (Zamir et al. 45), although TODs are thought to be more effective in the Baltimore area than in the D.C. area. This may be due to the more widely used Metro that exists in Washington, D.C. However, Prince George’s County Maryland has noticeably fewer TODs than its neighbor, Arlington, VA (Calton 515).
+
+```{r, echo=FALSE}
+load("means-graph.RData")
+chart_means <- ggplot(means_data, aes(cols, means)) +
+  geom_bar(stat = "identity", fill="#5499C7") +
+  xlab("Types of Transit") + ylab("Mean commute length (min)")
+chart_means
+```
+
+Maryland is at a critical time in its transportation development, as between 2016 and 2030 the state is expected to experience a population increase of one million (Liu et al.). Since 1992, Maryland has followed a progressive land-use policy laid out by the Economic Growth, Resource Protection and Planning Act. This Act, along with other policies, are intended to prevent further sprawling of suburban communities within the state (Liu et al.). Maryland also enacted a sustainable development initiative in 2011, called PlanMaryland. This plan has three primary objectives: to concentrate future development and redevelopment in communities where there is already existing infrastructure; to preserve environmentally sensitive and rural lands from degradation and development; and finally, to maintain a desirable quality of life for residents of the state that is sustainable (Knapp et al. 2). This plan aims to encourage local and regional governments to take the initiative in order to make these objectives a reality. For example, the Metro Red Line in Maryland has benefited from policy modifications which prompted dense development in proximity to the Red Line (Carlton 515). Partly as a result of an already extensive highway network, Maryland is expanding its transit system, as is its neighbor - northern Virginia. New light rails are being planned for the suburbs of both Baltimore and Washington (7).
+
+```{r eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+load("transit_rtes.RData")
+commute_shape <- commute_shape %>%
+  dplyr::mutate("Distance_from_Nearest_Transit_Route" = "dist_transit")
+#maps
+tmap_mode("view") #FOR viewing!!!
+map_transit_lns <- tm_shape(all_routes) + tm_lines(col = "TYPE", lwd=3, palette = "Set1") + tm_basemap(server = "Hydda.Base")
+map_dist <- tm_shape(commute_shape) + tm_polygons(col = "Distance_from_Nearest_Transit_Route", palette = "YlOrRd") + map_transit_lns
+map_commutes <- tm_shape(commute_shape) + tm_polygons(col = "commute", palette = "YlOrRd") + map_transit_lns
+map_dist
+map_commutes
+```
+
+The Washington Metropolitan Council of Government Region Forward Plan also has planned to have polycentrism prioritized in its purview, likely because of the HUD(U.S. Department of Housing and Urban Development)’s sustainable communities grant program. Yet, polycentrism can also increase vehicle miles traveled, likely caused by the increased housing costs near the employment clusters (polycentrism 5). Another transit strategy that is an option for Maryland is what is known as direct ridership models (DRMs), which compute the estimated ridership for a transit system using multiple regression analyses of urban development, features of the transit system, and the demographics of the riders. This is a relatively low-cost prediction method because the only data required is for areas falling within a buffer of the transit station, called cathcment areas (Liu et al.).
+
+
+```{r, echo=FALSE}
+
+load("tidycensus.RData")
+cars_crs <- cars_crs %>%
+  dplyr::rename(Mean_Commute_Time_for_Drive_Alone = DrAl_mean)
+public_crs <- public_crs %>%
+  dplyr::rename(Mean_Commute_Time_on_Public_Transit = PubTrans_mean)
+
+#MAPPING!!
+tmap_mode("view") #FOR viewing!!!
+map_carsmean <- tm_shape(cars_crs) + tm_polygons(col = "Mean_Commute_Time_for_Drive_Alone", palette = "YlOrRd", style = "quantile") + tm_basemap(server = "OpenStreetMap.HOT")
+map_carsmean #map of commute times for people driving
+
+map_PubTrans <- tm_shape(public_crs) + tm_polygons(col = "Mean_Commute_Time_on_Public_Transit", palette = "BuGn", style = "quantile") + tm_basemap(server = "OpenStreetMap.HOT")
+map_PubTrans #public transit map
+```
+
+##	Conclusions & Key Takeaways
+One limitation of my report is that I did not differentiate between electric vehicles and vehicles with internal combustion engines. However, Farkas, et al. found that in 2016 only about 500 electric vehicles were registered in the state of Maryland. 77% of the respondents to their survey about electric vehicles (all respondents own electric vehicles) indicated that they do not reside near a rail station (41).
+
