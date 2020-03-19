@@ -1,4 +1,4 @@
 title: Commuting Patterns in Maryland
-  - text: "Home"
-   href: index.html
+  text: "Home"
+  href: index.html
 theme: jekyll-theme-cayman
