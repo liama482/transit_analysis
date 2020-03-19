@@ -2,6 +2,9 @@
 title: "Main_product"
 author: "Liam Abbate"
 date: "3/19/2020"
+output:
+  html document:
+    keep_md: true
 ---
 
 ```{r setup, include=FALSE}
